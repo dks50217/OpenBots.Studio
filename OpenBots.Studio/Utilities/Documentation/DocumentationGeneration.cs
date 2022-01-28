@@ -13,7 +13,7 @@ using AContainer = Autofac.IContainer;
 namespace OpenBots.Studio.Utilities.Documentation
 {
     /// <summary>
-    /// This class generates markdown files to be used in the official OpenBots Website
+    /// 產RPA WEB用的Slides
     /// </summary>
     public class DocumentationGeneration
     {
@@ -24,7 +24,7 @@ namespace OpenBots.Studio.Utilities.Documentation
         public string GenerateMarkdownFiles(AContainer container, string basePath)
         {
             //create directory if required
-            var docsFolderName = "docs";
+            var docsFolderName = "docs2";
             var docsPath = Path.Combine(basePath, docsFolderName);
             if (!Directory.Exists(docsPath))
             {
@@ -34,111 +34,129 @@ namespace OpenBots.Studio.Utilities.Documentation
             var commandClasses = TypeMethods.GenerateCommandTypes(container);
 
             var highLevelCommandInfo = new List<CommandMetaData>();
-            StringBuilder stringBuilder;
-            string fullFileName;
+            StringBuilder stringBuilder = null;
+            string fullFileName = String.Empty;
 
-            //loop each command
-            foreach (var commandClass in commandClasses)
+            var groupList = commandClasses.GroupBy(c => c.Namespace).Select(c => c.Key);
+
+            foreach (var markdownName in groupList)
             {
-                //instantiate and pull properties from command class
-                ScriptCommand instantiatedCommand = (ScriptCommand)Activator.CreateInstance(commandClass);
-                var groupName = GetClassValue(commandClass, typeof(CategoryAttribute));
-                var classDescription = GetClassValue(commandClass, typeof(DescriptionAttribute));
-                var commandName = instantiatedCommand.SelectionName;
+                // Create Folder
+                string kebobDestination = markdownName.Replace(".", "_").Replace(" ", "-").Replace("/", "-").ToLower();
+                var destinationdirectory = docsPath;//Path.Combine(docsPath, kebobDestination);
+                var kebobFileName = $"{kebobDestination.Replace("openbots_commands_", string.Empty)}-commands.md";
 
                 stringBuilder = new StringBuilder();
 
-                //create string builder to build markdown document and append data
-                stringBuilder.AppendLine("<!--TITLE: " + commandName + " Command -->");
-                stringBuilder.AppendLine("<!-- SUBTITLE: a command in the " + groupName + " group. -->");
-                stringBuilder.AppendLine("[Go To Automation Commands Overview](/automation-commands)");
-
-                stringBuilder.AppendLine(Environment.NewLine);
-                stringBuilder.AppendLine("# " + commandName + " Command");
-                stringBuilder.AppendLine(Environment.NewLine);
-
-                //append more
-                stringBuilder.AppendLine("## What does this command do?");
-                stringBuilder.AppendLine(classDescription);
-                stringBuilder.AppendLine(Environment.NewLine);
-
-                //build parameter table based on required user inputs
-                stringBuilder.AppendLine("## Command Parameters");
-                stringBuilder.AppendLine("| Parameter Question   	| What to input  	|  Sample Data 	| Remarks  	|");
-                stringBuilder.AppendLine("| ---                    | ---               | ---           | ---       |");
-
-                //loop each property
-                foreach (var prop in commandClass.GetProperties().Where(f => f.Name.StartsWith("v_")).ToList())
-                {
-                    //pull attributes from property
-                    var commandLabel = CleanMarkdownValue(GetPropertyValue(prop, typeof(DisplayNameAttribute)));
-                    var helpfulExplanation = CleanMarkdownValue(GetPropertyValue(prop, typeof(DescriptionAttribute)));
-                    var sampleUsage = CleanMarkdownValue(GetPropertyValue(prop, typeof(SampleUsage)));
-                    var remarks = CleanMarkdownValue(GetPropertyValue(prop, typeof(Remarks)));
-
-                    //append to parameter table
-                    stringBuilder.AppendLine("|" + commandLabel + "|" + helpfulExplanation + "|" + sampleUsage + "|" + remarks + "|");
-                }
-
-                stringBuilder.AppendLine(Environment.NewLine);
-                stringBuilder.AppendLine("## Developer/Additional Reference");
-                stringBuilder.AppendLine("Automation Class Name: " + commandClass.Name);
-                stringBuilder.AppendLine("Parent Namespace: " + commandClass.Namespace);
-                stringBuilder.AppendLine("This page was generated on " + DateTime.Now.ToString("MM/dd/yy hh:mm tt"));
-                stringBuilder.AppendLine(Environment.NewLine);
-                stringBuilder.AppendLine("## Help");
-                stringBuilder.AppendLine("[Open/Report an issue on GitHub](https://github.com/OpenBotsAI/OpenBots.Studio/issues/new)");
-                stringBuilder.AppendLine("[Ask a question on the OpenBots Forum](https://openbots.ai/forums/)");
-
-                //create kebob destination and command file name
-                var kebobDestination = groupName.Replace(" ", "-").Replace("/", "-").ToLower();
-                var kebobFileName = commandName.Replace(" ", "-").Replace("/", "-").ToLower() + "-command.md";
-
-                //create directory if required
-                var destinationdirectory = Path.Combine(docsPath, kebobDestination);
                 if (!Directory.Exists(destinationdirectory))
                 {
                     Directory.CreateDirectory(destinationdirectory);
                 }
 
-                //write file
-                fullFileName = Path.Combine(destinationdirectory, kebobFileName);
-                File.WriteAllText(fullFileName, stringBuilder.ToString());
+                // Header Style
+                var styleHeader = "<style> .small td{font-size:40%;}th{font-size:70%} .label foreignObject {overflow: visible;} svg[id^='mermaid - '] { width:400% } </style>";
+                stringBuilder.AppendLine(styleHeader);
+                stringBuilder.AppendLine(Environment.NewLine);
 
-                //add to high level
-                var serverPath = "/automation-commands/" + kebobDestination + "/" + kebobFileName.Replace(".md", "");
-                highLevelCommandInfo.Add(
-                    new CommandMetaData()
+                // Command Name
+                stringBuilder.AppendLine("# " + kebobDestination);
+
+                // Header Menu
+                stringBuilder.AppendLine();
+                stringBuilder.AppendLine("---");
+
+                // Empty Menu Title
+                stringBuilder.AppendLine();
+                stringBuilder.AppendLine("#");
+                stringBuilder.AppendLine();
+
+                stringBuilder.AppendLine("<div class='table-wrapper small' markdown='block'>");
+                stringBuilder.AppendLine();
+                stringBuilder.AppendLine(@"| Commands                  | Sub\_Commands                    |");
+                stringBuilder.AppendLine("| ------------------------  |:--------------------------------:|");
+
+                var filterClass = commandClasses.Where(c=> c.FullName.Contains(markdownName)).ToList();
+
+                foreach (var commandClass in filterClass)
+                {
+                    ScriptCommand instantiatedCommand = (ScriptCommand)Activator.CreateInstance(commandClass);
+                    var commandName = instantiatedCommand.SelectionName;
+                    stringBuilder.AppendLine($"| {markdownName}               | {commandName}                             |");
+                }
+
+                stringBuilder.AppendLine();
+                stringBuilder.AppendLine("</div>");
+
+                stringBuilder.AppendLine();
+                stringBuilder.AppendLine("---");
+
+                //loop each command
+                foreach (var commandClass in filterClass)
+                {
+                    //instantiate and pull properties from command class
+                    ScriptCommand instantiatedCommand = (ScriptCommand)Activator.CreateInstance(commandClass);
+                    var groupName = GetClassValue(commandClass, typeof(CategoryAttribute));
+                    var classDescription = GetClassValue(commandClass, typeof(DescriptionAttribute));
+                    var commandName = instantiatedCommand.SelectionName;
+
+                    stringBuilder.AppendLine();
+                    stringBuilder.AppendLine("#### " + commandName);
+                    stringBuilder.AppendLine();
+
+                    // slide table
+                    stringBuilder.AppendLine("<div class='table-wrapper small' markdown='block'>");
+                    stringBuilder.AppendLine();
+
+                    stringBuilder.AppendLine("| Parameter Question   	| What to input  	|  Sample Data 	| Remarks  	|");
+                    stringBuilder.AppendLine("| ---                    | ---               | ---           | ---       |");
+
+                    //loop each property
+                    foreach (var prop in commandClass.GetProperties().Where(f => f.Name.StartsWith("v_")).ToList())
                     {
-                        Group = groupName,
-                        Description = classDescription,
-                        Name = commandName,
-                        Location = serverPath
-                    });
+                        //pull attributes from property
+                        var commandLabel = CleanMarkdownValue(GetPropertyValue(prop, typeof(DisplayNameAttribute)));
+                        var helpfulExplanation = CleanMarkdownValue(GetPropertyValue(prop, typeof(DescriptionAttribute)));
+                        var sampleUsage = CleanMarkdownValue(GetPropertyValue(prop, typeof(SampleUsage)));
+                        var remarks = CleanMarkdownValue(GetPropertyValue(prop, typeof(Remarks)));
+
+                        //append to parameter table
+                        stringBuilder.AppendLine("|" + commandLabel + "|" + helpfulExplanation + "|" + sampleUsage + "|" + remarks + "|");
+                    }
+
+                    stringBuilder.AppendLine();
+                    stringBuilder.AppendLine("</div>");
+                    stringBuilder.AppendLine();
+                    stringBuilder.AppendLine("---");
+
+                    //write file
+                    fullFileName = Path.Combine(destinationdirectory, kebobFileName);
+                }
+
+                File.WriteAllText(fullFileName, stringBuilder.ToString());
+                stringBuilder.Clear();
             }
-
-            stringBuilder = new StringBuilder();
-            stringBuilder.AppendLine("<!--TITLE: Automation Commands -->");
-            stringBuilder.AppendLine("<!-- SUBTITLE: an overview of available commands in OpenBots. -->");
-            stringBuilder.AppendLine("## Automation Commands");
-            stringBuilder.AppendLine("| Command Group   	| Command Name 	|  Command Description	|");
-            stringBuilder.AppendLine("| ---                | ---           | ---                   |");
-
-            foreach (var cmd in highLevelCommandInfo)
-            {
-                stringBuilder.AppendLine("|" + cmd.Group + "|[" + cmd.Name + "](" + cmd.Location + ")|" + cmd.Description + "|");
-            }
-           
-            stringBuilder.AppendLine(Environment.NewLine);
-            stringBuilder.AppendLine("## Help");
-            stringBuilder.AppendLine("[Open/Report an issue on GitHub](https://github.com/OpenBotsAI/OpenBots.Studio/issues/new)");
-            stringBuilder.AppendLine("[Ask a question on the OpenBots forum](https://openbots.ai/forums/)");
-
-            //write file
-            fullFileName = Path.Combine(docsPath, "automation-commands.md");
-            File.WriteAllText(fullFileName, stringBuilder.ToString());
 
             return docsPath;
+        }
+
+        /// <summary>
+        /// 產RPA WEB用的JSON FILE
+        /// </summary>
+        /// <param name="container"></param>
+        /// <param name="basePath"></param>
+        /// <returns></returns>
+        public string GenerateJsonFiles(AContainer container, string basePath)
+        {
+            //create directory if required
+            //var docsFolderName = "json";
+            //var docsPath = Path.Combine(basePath, docsFolderName);
+            //if (!Directory.Exists(docsPath))
+            //{
+            //    Directory.CreateDirectory(docsPath);
+            //}
+
+            //var commandClasses = TypeMethods.GenerateCommandTypes(container);
+            return String.Empty;
         }
 
         private string GetPropertyValue(PropertyInfo prop, Type attributeType)
