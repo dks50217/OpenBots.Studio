@@ -276,8 +276,27 @@ namespace OpenBots.UI.Forms
             {
                 MessageBox.Show("Root path is not valid.");
             }
-            
         }
+
+        /// <summary>
+        /// 建立RPA WEB用JSON結構
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void btnGenerateRPAJson_Click(object sender, EventArgs e)
+        {
+            DocumentationGeneration docGeneration = new DocumentationGeneration();
+            if (Directory.Exists(txtAppFolderPath.Text))
+            {
+                var docsRoot = docGeneration.GenerateJsonFiles(_container, txtAppFolderPath.Text);
+                Process.Start(docsRoot);
+            }
+            else
+            {
+                MessageBox.Show("Root path is not valid.");
+            }
+        }
+
 
         private void btnLaunchAttendedMode_Click(object sender, EventArgs e)
         {

@@ -1,4 +1,6 @@
-﻿using OpenBots.Core.Attributes.PropertyAttributes;
+﻿using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
+using OpenBots.Core.Attributes.PropertyAttributes;
 using OpenBots.Core.Command;
 using OpenBots.Core.Utilities.CommonUtilities;
 using System;
@@ -54,7 +56,7 @@ namespace OpenBots.Studio.Utilities.Documentation
                 }
 
                 // Header Style
-                var styleHeader = "<style> .small td{font-size:40%;}th{font-size:70%} .label foreignObject {overflow: visible;} svg[id^='mermaid - '] { width:400% } </style>";
+                var styleHeader = "<style> .small {max-height:600px;overflow-y: auto;} td{font-size:40%;}th{font-size:70%} .label foreignObject {overflow: visible;} svg[id^='mermaid - '] { width:400% } </style>";
                 stringBuilder.AppendLine(styleHeader);
                 stringBuilder.AppendLine(Environment.NewLine);
 
@@ -93,6 +95,8 @@ namespace OpenBots.Studio.Utilities.Documentation
                 //loop each command
                 foreach (var commandClass in filterClass)
                 {
+                    var isLast = filterClass.IndexOf(commandClass) == filterClass.Count - 1;
+
                     //instantiate and pull properties from command class
                     ScriptCommand instantiatedCommand = (ScriptCommand)Activator.CreateInstance(commandClass);
                     var groupName = GetClassValue(commandClass, typeof(CategoryAttribute));
@@ -126,7 +130,8 @@ namespace OpenBots.Studio.Utilities.Documentation
                     stringBuilder.AppendLine();
                     stringBuilder.AppendLine("</div>");
                     stringBuilder.AppendLine();
-                    stringBuilder.AppendLine("---");
+
+                    if (!isLast) stringBuilder.AppendLine("---");
 
                     //write file
                     fullFileName = Path.Combine(destinationdirectory, kebobFileName);
@@ -139,24 +144,55 @@ namespace OpenBots.Studio.Utilities.Documentation
             return docsPath;
         }
 
-        /// <summary>
-        /// 產RPA WEB用的JSON FILE
-        /// </summary>
-        /// <param name="container"></param>
-        /// <param name="basePath"></param>
-        /// <returns></returns>
         public string GenerateJsonFiles(AContainer container, string basePath)
         {
             //create directory if required
-            //var docsFolderName = "json";
-            //var docsPath = Path.Combine(basePath, docsFolderName);
-            //if (!Directory.Exists(docsPath))
-            //{
-            //    Directory.CreateDirectory(docsPath);
-            //}
+            var docsFolderName = "json";
+            var docsPath = Path.Combine(basePath, docsFolderName);
+            if (!Directory.Exists(docsPath))
+            {
+                Directory.CreateDirectory(docsPath);
+            }
 
-            //var commandClasses = TypeMethods.GenerateCommandTypes(container);
-            return String.Empty;
+            var commandClasses = TypeMethods.GenerateCommandTypes(container);
+            var groupList = commandClasses.GroupBy(c => c.Namespace).Select(c => c.Key);
+            var dropdownMenuArray = new JArray();
+            var dropdownMapObj = new JObject();
+
+            foreach (var groupName in groupList)
+            {
+                // formatname 
+                string kebobDestination = groupName.Replace(".", "_").Replace(" ", "-").Replace("/", "-").ToLower();
+                var kebobFileName = $"{kebobDestination.Replace("openbots_commands_", string.Empty)}";
+                var dropdownMenu = new JObject();
+
+                // dropdownMenu
+                var parentID = RelationDictionary.CommandTree.ContainsKey(kebobFileName) ? 1 : 2;
+                dropdownMenu["parent"] = parentID;
+                dropdownMenu["label"] = $"{UppercaseFirst(kebobFileName)} Commands";
+
+                var formatcommand = $"{kebobFileName}-commands";
+                dropdownMenu["command"] = formatcommand;
+                dropdownMenuArray.Add(dropdownMenu);
+
+                // dropdownValueMap
+                var dropdownMapDetail = new JObject();
+                dropdownMapDetail["path"] = $"{formatcommand}.md";
+                dropdownMapDetail["active"] = false;
+                dropdownMapObj[formatcommand] = dropdownMapDetail;
+            }
+
+            // create json file
+            var dropdownMenuJsonFile = Path.Combine(docsPath, "dropdownMenu.json");
+            var dropdownMapJsonFile = Path.Combine(docsPath, "dropdownMap.json");
+
+            string dropdownMenuJson = JsonConvert.SerializeObject(dropdownMenuArray, Formatting.None);
+            File.WriteAllText(dropdownMenuJsonFile, dropdownMenuJson);
+
+            string dropdownMapJson = JsonConvert.SerializeObject(dropdownMapObj, Formatting.None);
+            File.WriteAllText(dropdownMapJsonFile, dropdownMapJson);
+
+            return docsPath;
         }
 
         private string GetPropertyValue(PropertyInfo prop, Type attributeType)
@@ -246,6 +282,17 @@ namespace OpenBots.Studio.Utilities.Documentation
             //}
 
             return "OK";
+        }
+
+        private static string UppercaseFirst(string s)
+        {
+            if (string.IsNullOrEmpty(s))
+            {
+                return string.Empty;
+            }
+            char[] a = s.ToCharArray();
+            a[0] = char.ToUpper(a[0]);
+            return new string(a);
         }
     }
 }

@@ -589,6 +589,7 @@
     </Compile>
     <Compile Include="Utilities\Documentation\CommandMetaData.cs" />
     <Compile Include="Utilities\Documentation\DocumentationGeneration.cs" />
+    <Compile Include="Utilities\Documentation\RelationDictionary.cs" />
     <Compile Include="Utilities\ExecutionManager.cs" />
     <Compile Include="Utilities\ManifestUpdate.cs" />
     <Compile Include="UI\CustomControls\CommandGroupControl.cs">
