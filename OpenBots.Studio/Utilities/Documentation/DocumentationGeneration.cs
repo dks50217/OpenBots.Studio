@@ -45,8 +45,9 @@ namespace OpenBots.Studio.Utilities.Documentation
             {
                 // Create Folder
                 string kebobDestination = markdownName.Replace(".", "_").Replace(" ", "-").Replace("/", "-").ToLower();
-                var destinationdirectory = docsPath;//Path.Combine(docsPath, kebobDestination);
-                var kebobFileName = $"{kebobDestination.Replace("openbots_commands_", string.Empty)}-commands.md";
+                var destinationdirectory = docsPath;
+                var commandTitle = kebobDestination.Replace("openbots_commands_", string.Empty);
+                var kebobFileName = $"{commandTitle}-commands.md";
 
                 stringBuilder = new StringBuilder();
 
@@ -61,7 +62,7 @@ namespace OpenBots.Studio.Utilities.Documentation
                 stringBuilder.AppendLine(Environment.NewLine);
 
                 // Command Name
-                stringBuilder.AppendLine("# " + kebobDestination);
+                stringBuilder.AppendLine("# " + commandTitle);
 
                 // Header Menu
                 stringBuilder.AppendLine();
