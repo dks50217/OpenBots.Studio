@@ -171,6 +171,7 @@ namespace OpenBots.Studio.Utilities.Documentation
                 var parentID = RelationDictionary.CommandTree.ContainsKey(kebobFileName) ? 1 : 2;
                 dropdownMenu["parent"] = parentID;
                 dropdownMenu["label"] = $"{UppercaseFirst(kebobFileName)} Commands";
+                dropdownMenu["visible"] = true;
 
                 var formatcommand = $"{kebobFileName}-commands";
                 dropdownMenu["command"] = formatcommand;
